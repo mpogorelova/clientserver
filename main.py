@@ -1,9 +1,9 @@
 """
 Это клиент-серверное приложение
 """
-
+import logging
 import socket
-from pyparsing import Word, nums, ZeroOrMore, Optional, oneOf
+from pyparsing import Word, nums, ZeroOrMore, Optional, oneOf, printables
 
 
 # 127.0.0.1 13000 -s -t -f log_output
@@ -13,11 +13,12 @@ def parser(variable):
     """
     port_name = (Word(nums))('port_entered')
     host_name = Word(nums)
+    titles = Word(printables)
     full_host_name = (host_name + ZeroOrMore('.' + host_name))('host_entered')
     flag1 = (Optional('-s'))('mode_flag')
     flag2 = (Optional('-' + oneOf('u t')))('delivery_flag')
-    flag3 = ('-' + oneOf('o f'))('log_flag')
-    log_output = Optional('log_output')
+    flag3 = (Optional('-' + oneOf('o f'))('log_flag'))
+    log_output = (Optional(titles))('file_name')
     parse_module = full_host_name + port_name + flag1 + flag2 + flag3 + log_output
     res = parse_module.parseString(variable)
     host_entered = ''.join(res.host_entered)
@@ -25,7 +26,8 @@ def parser(variable):
     mode_flag = res.mode_flag
     delivery_flag = ''.join(res.delivery_flag)
     log_flag = ''.join(res.log_flag)
-    return host_entered, port_entered, mode_flag, delivery_flag, log_flag
+    file_name = res.file_name
+    return host_entered, port_entered, mode_flag, delivery_flag, log_flag, file_name
 
 
 def server(host_var, port_var, deliv):
@@ -43,10 +45,14 @@ def server(host_var, port_var, deliv):
             data = sock.recvfrom(1024)
             received = data[0]
             addr = data[1]
+            logging.info('Сообщение получено')
             info = str(addr)
-            print('подсоединился:', addr)
-            sock.sendto(bytes(info, encoding='UTF-8'),addr)
+            # print('подсоединился:', addr)
+            sock.sendto(bytes(info, encoding='UTF-8'), addr)
+            logging.info('Сообщение отправлено')
             sock.close()
+            logging.info('Сокет закрыт')
+            break
     else:
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         print('TCP-сокет создан')
@@ -74,7 +80,7 @@ def client(host_var, port_var, deliv):
         sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         print('UDP-сокет создан')
         message = input('Введите сообщение')
-        sock.sendto(bytes(message, encoding='UTF-8'),(host, port))
+        sock.sendto(bytes(message, encoding='UTF-8'), (host, port))
         data = sock.recvfrom(1024)
         print(data[0])
         sock.close()
@@ -89,10 +95,21 @@ def client(host_var, port_var, deliv):
         sock.close()
 
 
+def logger(log_type, name):
+    """
+    Это функция-логгер
+    """
+    if log_type == '-f':
+        logging.basicConfig(level=logging.INFO, filename=name)
+    else:
+        logging.basicConfig(level=logging.INFO)
+
 
 if __name__ == '__main__':
+
     cmd = input()
-    host_ent, port_ent, mode, delivery, log = parser(cmd)
+    host_ent, port_ent, mode, delivery, log, title = parser(cmd)
+    logger(log, title)
     print(host_ent, port_ent, mode, delivery, log)
     if mode == '-s':
         server(host_ent, port_ent, delivery)
