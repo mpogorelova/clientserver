@@ -12,13 +12,11 @@ def parser(variable):
     Это парсер, который выполняет разбор команды клиента
     """
     port_name = (Word(nums))('port_entered')
-    host_name = Word(nums)
-    titles = Word(printables)
-    full_host_name = (host_name + ZeroOrMore('.' + host_name))('host_entered')
+    full_host_name = ((Word(nums)) + ZeroOrMore('.' + (Word(nums))))('host_entered')
     flag1 = (Optional('-s'))('mode_flag')
     flag2 = (Optional('-' + oneOf('u t')))('delivery_flag')
     flag3 = (Optional('-' + oneOf('o f'))('log_flag'))
-    log_output = (Optional(titles))('file_name')
+    log_output = (Optional(Word(printables)))('file_name')
     parse_module = full_host_name + port_name + flag1 + flag2 + flag3 + log_output
     res = parse_module.parseString(variable)
     host_entered = ''.join(res.host_entered)
@@ -40,33 +38,38 @@ def server(host_var, port_var, deliv):
     if tcp_or_udp == '-u':
         while 1:
             sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-            print('UDP-сокет создан')
+            logging.info('UDP-сокет создан')
             sock.bind((host, port))
             data = sock.recvfrom(1024)
-            received = data[0]
             addr = data[1]
             logging.info('Сообщение получено')
             info = str(addr)
-            # print('подсоединился:', addr)
+            print('подсоединился:', addr)
             sock.sendto(bytes(info, encoding='UTF-8'), addr)
             logging.info('Сообщение отправлено')
             sock.close()
             logging.info('Сокет закрыт')
             break
+            # прерывание для тестирования, т.к. по заданию сервер слушает в бесконечном цикле
     else:
-        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        print('TCP-сокет создан')
-        sock.bind((host, port))
-        print('Сервер готов слушать')
-        sock.listen()
         while 1:
+            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            logging.info('TCP-сокет создан')
+            sock.bind((host, port))
+            logging.info('Сервер готов слушать')
+            sock.listen()
             conn, addr = sock.accept()
             data2 = str(addr)
+            logging.info('Сообщение получено')
             print('подсоединился:', addr)
             data = conn.recv(1024)
             print(str(data))
             conn.send(bytes(data2, encoding='UTF-8'))
+            logging.info('Сообщение отправлено')
             conn.close()
+            logging.info('Сокет закрыт')
+            break
+            # прерывание для тестирования, т.к. по заданию сервер слушает в бесконечном цикле
 
 
 def client(host_var, port_var, deliv):
@@ -79,7 +82,7 @@ def client(host_var, port_var, deliv):
     if tcp_or_udp == '-u':
         sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         print('UDP-сокет создан')
-        message = input('Введите сообщение')
+        message = input('Введите сообщение\n')
         sock.sendto(bytes(message, encoding='UTF-8'), (host, port))
         data = sock.recvfrom(1024)
         print(data[0])
@@ -88,7 +91,7 @@ def client(host_var, port_var, deliv):
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         print('TCP-сокет создан')
         sock.connect((host, port))
-        message = input('Введите сообщение')
+        message = input('Введите сообщение\n')
         sock.send(bytes(message, encoding='UTF-8'))
         data = sock.recv(1024)
         print(data)
@@ -107,10 +110,9 @@ def logger(log_type, name):
 
 if __name__ == '__main__':
 
-    cmd = input()
+    cmd = input('Enter cmd like: <host> <port> [-s] [-t | -u] [-o | -f <file>]\n')
     host_ent, port_ent, mode, delivery, log, title = parser(cmd)
     logger(log, title)
-    print(host_ent, port_ent, mode, delivery, log)
     if mode == '-s':
         server(host_ent, port_ent, delivery)
     else:
