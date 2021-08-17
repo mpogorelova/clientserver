@@ -100,7 +100,7 @@ def client(host_var, port_var, deliv):
 
 def logger(log_type, name):
     """
-    Это функция-логгер
+    Это функция-логгер, которая определяет место логов
     """
     if log_type == '-f':
         logging.basicConfig(level=logging.INFO, filename=name)
